@@ -1,20 +1,45 @@
+import asyncio
 import math
+import time
 
-import requests
+from pyodide.ffi import JsException
+from pyodide.http import pyfetch
 import streamlit as st
 
 
 API_URL = "https://www.cbr-xml-daily.ru/daily_json.js"
 
 
-@st.cache_data(ttl=3600)
-def get_rates():
-    """Получает полный ответ API с датой и курсами."""
+async def fetch_rates():
+    """Загружает JSON через асинхронный Fetch API браузера."""
 
-    response = requests.get(API_URL, timeout=15)
+    response = await pyfetch(API_URL)
     response.raise_for_status()
+    data = await response.json()
 
-    return response.json()
+    if not isinstance(data, dict):
+        raise ValueError("Ответ API должен быть объектом JSON.")
+    if not isinstance(data.get("Valute"), dict) or not data["Valute"]:
+        raise ValueError("В ответе нет списка валют.")
+    if not isinstance(data.get("Date"), str):
+        raise ValueError("В ответе нет даты курсов.")
+
+    return data
+
+
+async def get_rates():
+    """Хранит успешный ответ в сессии на час, не кешируя coroutine."""
+
+    cached = st.session_state.get("_rates_cache")
+    if cached is not None and time.monotonic() - cached["loaded_at"] < 3600:
+        return cached["data"]
+
+    data = await asyncio.wait_for(fetch_rates(), timeout=20)
+    st.session_state["_rates_cache"] = {
+        "loaded_at": time.monotonic(),
+        "data": data,
+    }
+    return data
 
 
 def convert_to_rubles(amount, currency):
@@ -24,19 +49,25 @@ def convert_to_rubles(amount, currency):
     return amount * rate
 
 
-def main():
+async def main():
     st.set_page_config(page_title="Конвертер валют", layout="centered")
     st.title("Конвертер валют")
     st.write("Выберите валюту и узнайте стоимость суммы в рублях.")
     st.caption("Источник: [CBR-XML-Daily](https://www.cbr-xml-daily.ru/)")
 
     try:
-        data = get_rates()
+        data = await get_rates()
         currencies = data["Valute"]
         date = data["Date"][:10]
-    except requests.exceptions.RequestException:
+    except (JsException, OSError, asyncio.TimeoutError):
         st.error("Не удалось получить курсы валют из API.")
-        st.info("Проверьте доступ к сервису и обновите страницу.")
+        st.info(
+            "Откройте сайт в обычном браузере, проверьте доступ к источнику "
+            "и попробуйте другую сеть: Wi-Fi или мобильный интернет."
+        )
+        st.markdown(f"[Открыть источник курсов отдельно]({API_URL})")
+        if st.button("Повторить загрузку"):
+            st.rerun()
         return
     except (ValueError, KeyError, TypeError):
         st.error("Сервис вернул данные в неожиданном формате.")
@@ -83,4 +114,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    await main()
