@@ -112,6 +112,51 @@ async def main():
         st.metric(f"{amount:.2f} {code} в рублях", f"{rubles:.2f} RUB")
         st.caption(f"Курс за 1 {code}: {rate:.4f} RUB")
 
+    # Новый блок: вставьте в конец main(), вне if submitted и формы.
+    st.divider()
+    st.subheader("Как изменились курсы")
+
+    current_date = data["Date"][:10]
+    previous_date = data["PreviousDate"][:10]
+    st.caption(f"Сравнение публикаций: {previous_date} -> {current_date}")
+
+    chart_data = {
+        "Валюта": [],
+        "Изменение, %": [],
+    }
+
+    for chart_code in ["USD", "EUR", "GBP", "JPY"]:
+        if chart_code not in currencies:
+            continue
+
+        item = currencies[chart_code]
+        current_rate = item["Value"] / item["Nominal"]
+        previous_rate = item["Previous"] / item["Nominal"]
+
+        if previous_rate == 0:
+            continue
+
+        change_percent = (
+            (current_rate - previous_rate) / previous_rate * 100
+        )
+
+        chart_data["Валюта"].append(chart_code)
+        chart_data["Изменение, %"].append(change_percent)
+
+    if chart_data["Валюта"]:
+        st.bar_chart(
+            chart_data,
+            x="Валюта",
+            y="Изменение, %",
+            color="#4C78A8",
+            height=320,
+        )
+    else:
+        st.info("Нет данных для сравнения выбранных валют.")
+
+    st.caption("Выше нуля - рост курса валюты к рублю, ниже - снижение.")
+
+
 
 if __name__ == "__main__":
     await main()
