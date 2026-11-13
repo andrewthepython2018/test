@@ -2,6 +2,7 @@ import asyncio
 import math
 import time
 
+# Повторная публикация сайта
 from pyodide.ffi import JsException
 from pyodide.http import pyfetch
 import streamlit as st
