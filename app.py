@@ -4,7 +4,7 @@ from datetime import date, timedelta
 from pathlib import Path
 from uuid import uuid4
 
-import streamlit as st
+import streamlit as st #1
 
 
 if sys.platform == "emscripten":
