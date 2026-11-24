@@ -4,7 +4,7 @@ from datetime import date, timedelta
 from pathlib import Path
 from uuid import uuid4
 
-import streamlit as st #1
+import streamlit as st
 
 
 if sys.platform == "emscripten":
@@ -61,7 +61,8 @@ def show_summary(tasks, today):
 
     if tasks:
         st.progress(done / len(tasks), text=f"Выполнено {done} из {len(tasks)}")
-with st.expander("Выполнено за последние 7 дней"):
+
+    with st.expander("Выполнено за последние 7 дней"):
         days = [today - timedelta(days=offset) for offset in range(6, -1, -1)]
         counts = [
             sum(task["completed_on"] == day.isoformat() for task in tasks)
