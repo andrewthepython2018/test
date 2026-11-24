@@ -62,15 +62,18 @@ def show_summary(tasks, today):
     if tasks:
         st.progress(done / len(tasks), text=f"Выполнено {done} из {len(tasks)}")
 
+    show_weekly_chart(tasks, today)
+
+
+def show_weekly_chart(tasks, last_day):
+    first_day = last_day - timedelta(days=6)
+    days = [(first_day + timedelta(days=offset)).isoformat() for offset in range(7)]
+    counts = [sum(task["completed_on"] == day for task in tasks) for day in days]
+
     with st.expander("Выполнено за последние 7 дней"):
-        days = [today - timedelta(days=offset) for offset in range(6, -1, -1)]
-        counts = [
-            sum(task["completed_on"] == day.isoformat() for task in tasks)
-            for day in days
-        ]
         if any(counts):
             st.bar_chart(
-                {"Дата": [day.isoformat() for day in days], "Задач": counts},
+                {"Дата": days, "Задач": counts},
                 x="Дата",
                 y="Задач",
                 height=210,
